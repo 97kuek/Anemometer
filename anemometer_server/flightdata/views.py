@@ -1,82 +1,97 @@
-from django.shortcuts import render
+import datetime
+import json
+import os
+import threading
 
-# Create your views here.
-
-import requests,json,datetime,time
+import requests
 from apscheduler.schedulers.background import BackgroundScheduler
-
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-url="https://optimalis-database-default-rtdb.asia-southeast1.firebasedatabase.app/.json"
-sess=requests.session()
+# #13: Firebase URLを環境変数化
+FIREBASE_URL = os.environ.get(
+    "FIREBASE_URL",
+    "https://optimalis-database-default-rtdb.asia-southeast1.firebasedatabase.app/.json"
+)
+GETDATA_FILEPATH = os.path.join(os.path.dirname(__file__), "getdata.json")
 
-getdata_filepath="./getdata.json"
+sess = requests.session()
+# ファイルアクセスの競合を防ぐためのロック (#5)
+_file_lock = threading.Lock()
 
 
 class LatestData():
-    LHWD=[]#WindSpeed:,Time:(datetime型),AID
+    # #2: クラス変数 → インスタンス変数
+    def __init__(self):
+        self.LHWD = []
 
-    def updateLHWD(self): 
-        f=open(getdata_filepath,mode='r')
-        givendata=[]
-        for item in f.readlines():
-            givendata.append(json.loads(item))
-        f.close()
-        f=open(getdata_filepath,mode='w')
-        f.close()
-        for item in givendata:
-            item['Time']=datetime.datetime.strptime(item['Time'],'%Y-%m-%d %H:%M:%S.%f')
-            self.LHWD.append(item)
-    
+    def updateLHWD(self):
+        with _file_lock:
+            try:
+                with open(GETDATA_FILEPATH, mode='r') as f:
+                    lines = f.readlines()
+                # 読み取り後にファイルをクリア
+                with open(GETDATA_FILEPATH, mode='w'):
+                    pass
+            except FileNotFoundError:
+                return
+
+        for item in lines:
+            item = item.strip()
+            if not item:
+                continue
+            try:
+                data = json.loads(item)
+                data['Time'] = datetime.datetime.strptime(data['Time'], '%Y-%m-%d %H:%M:%S.%f')
+                self.LHWD.append(data)
+            except (json.JSONDecodeError, KeyError, ValueError):
+                pass
+
     def checkLHWD(self):
-        rmlist=[]
-        for data in self.LHWD:
-            if data['Time']<(datetime.datetime.now()-datetime.timedelta(hours=1)):
-                rmlist.append(data)
-        for data in rmlist:
-            self.LHWD.remove(data)
-    
+        cutoff = datetime.datetime.now() - datetime.timedelta(hours=1)
+        self.LHWD = [data for data in self.LHWD if data['Time'] >= cutoff]
 
-fetch_fd=False
-fetch_fd=True
-latestdata=LatestData()
 
-def get():
+# #3: fetch_fd=False の二重代入を削除
+fetch_fd = True
+latestdata = LatestData()
+
+
+# #4: 関数名 'get' が requests.session.get と衝突するため改名
+def fetch_flight_data():
     if not fetch_fd:
-        return 0
-    get=sess.get(url) 
-    json_data=json.loads(get.text)
-    json_data['Time']=str(datetime.datetime.now())
-    f=open(getdata_filepath,mode='a')
-    f.write(json.dumps(json_data)+"\n")
-    f.close()
-    
+        return
+    try:
+        response = sess.get(FIREBASE_URL)
+        json_data = json.loads(response.text)
+        json_data['Time'] = str(datetime.datetime.now())
+        with _file_lock:
+            with open(GETDATA_FILEPATH, mode='a') as f:
+                f.write(json.dumps(json_data) + "\n")
+    except Exception as e:
+        print(f"ERROR: Failed to fetch flight data: {e}")
+
 
 def start():
-   scheduler=BackgroundScheduler()
-   scheduler.add_job(get,'interval',seconds=2)
-   scheduler.start()
-   print("flight data get is scheduled")
-
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(fetch_flight_data, 'interval', seconds=2)
+    scheduler.start()
+    print("flight data get is scheduled")
 
 
 class LHWD(APIView):
-    def get(self,response):
+    def get(self, request):
         latestdata.updateLHWD()
         latestdata.checkLHWD()
         return Response(latestdata.LHWD)
 
+
 class LD(APIView):
-    def get(self,response):
+    def get(self, request):
         latestdata.updateLHWD()
-        if len(latestdata.LHWD) == 0:
+        cutoff = datetime.datetime.now() - datetime.timedelta(seconds=120)
+        # #10: flightdataにも同じis_there_dataバグが存在したため修正
+        recent = [item for item in latestdata.LHWD if item['Time'] > cutoff]
+        if not recent:
             return Response([])
-        ld_last=latestdata.LHWD[0]
-        is_there_data=False
-        for item in latestdata.LHWD:
-            if ld_last['Time']<item['Time'] and item['Time']>(datetime.datetime.now()-datetime.timedelta(seconds=120)):
-                ld_last=item
-                is_there_data=True
-        if is_there_data:return Response(ld_last)
-        else: return Response([])
+        return Response(max(recent, key=lambda x: x['Time']))

@@ -441,12 +441,12 @@
           "type": "esri-xyz"
         },
         "controls": {
-          "mouseWheelZoom": false,
+          "mouseWheelZoom": true,
           "showAttribution": true,
           "showDebug": false,
           "showMeasure": false,
           "showScale": false,
-          "showZoom": false
+          "showZoom": true
         },
         "layers": [
           {
@@ -495,7 +495,9 @@
               "options": "AID1"
             },
             "location": {
-              "mode": "auto"
+              "mode": "coords",
+              "latitude": "Latitude",
+              "longitude": "Longitude"
             },
             "name": "AID1",
             "tooltip": true,
@@ -547,7 +549,9 @@
               "options": "AID2"
             },
             "location": {
-              "mode": "auto"
+              "mode": "coords",
+              "latitude": "Latitude",
+              "longitude": "Longitude"
             },
             "name": "AID2",
             "tooltip": true,
@@ -598,7 +602,9 @@
               "options": "AID3"
             },
             "location": {
-              "mode": "auto"
+              "mode": "coords",
+              "latitude": "Latitude",
+              "longitude": "Longitude"
             },
             "name": "AID3",
             "tooltip": true,
@@ -628,12 +634,12 @@
             {
               "selector": "Latitude",
               "text": "Latitude",
-              "type": "string"
+              "type": "number"
             },
             {
               "selector": "Longitude",
               "text": "Longitude",
-              "type": "string"
+              "type": "number"
             }
           ],
           "datasource": {
@@ -671,12 +677,12 @@
             {
               "selector": "Latitude",
               "text": "Latitude",
-              "type": "string"
+              "type": "number"
             },
             {
               "selector": "Longitude",
               "text": "Longitude",
-              "type": "string"
+              "type": "number"
             }
           ],
           "datasource": {
@@ -715,12 +721,12 @@
             {
               "selector": "Latitude",
               "text": "Latitude",
-              "type": "string"
+              "type": "number"
             },
             {
               "selector": "Longitude",
               "text": "Longitude",
-              "type": "string"
+              "type": "number"
             }
           ],
           "datasource": {

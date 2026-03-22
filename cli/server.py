@@ -1,6 +1,7 @@
 import hmac
 import hashlib
 import base64
+import os
 import requests
 import json
 from requests.exceptions import RequestException, ConnectionError, HTTPError, Timeout
@@ -15,7 +16,7 @@ class ServerComm():
         self.Server_Url=su
         self.Post_Dir=pd
         self.Get_Dir=gd
-        self.SecretKey = "secret" # サーバー側に登録したキーと一致させる
+        self.SecretKey = os.environ.get("ANEMOMETER_SECRET_KEY", "secret")  # #6: 環境変数化
 
     def post_data(self,body):
         try:

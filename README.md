@@ -27,22 +27,66 @@ git clone <本リポジトリのURL>
 cd Anemometer
 ```
 
-### 3. システムの一括セットアップ・起動
+### 3. 環境変数の設定 (初回のみ)
 
-リポジトリ直下にある `init.sh` スクリプトを実行することで、Docker コンテナのビルドから起動、データベースの初期設定（マイグレーション）、静的ファイルの収集までをすべて自動で行います。
+本システムを起動する前に、データベースやDjango、Grafanaで使用する環境変数ファイル(`.env`)を作成する必要があります。
+ターミナルで以下のコマンドを実行し、必要なディレクトリとファイルを作成してください。
 
 ```bash
-# 初回起動時、または設定変更時
-bash ./init.sh
+# 各ディレクトリの作成
+mkdir -p mysql grafana django
+
+# mysql/.env の作成
+cat << 'EOF' > mysql/.env
+MYSQL_ROOT_PASSWORD=password
+MYSQL_DATABASE=anemometer
+MYSQL_USER=anemometer
+MYSQL_PASSWORD=password
+EOF
+
+# django/.env の作成
+cat << 'EOF' > django/.env
+MYSQL_DATABASE=anemometer
+MYSQL_USER=anemometer
+MYSQL_PASSWORD=password
+EOF
+
+# grafana/.env の作成
+cat << 'EOF' > grafana/.env
+GF_SECURITY_ADMIN_PASSWORD=admin
+GF_SERVER_DOMAIN=localhost
+GF_SERVER_ROOT_URL=http://localhost:8000/grafana/
+GF_SERVER_SERVE_FROM_SUB_PATH=true
+GF_INSTALL_PLUGINS=yesoreyeram-infinity-datasource,briangann-gauge-panel
+EOF
 ```
 
-**`init.sh` 実行時に内部で行われていること:**
-1. `docker compose build` : 必要な Docker イメージのビルド
-2. `docker compose up -d` : 全コンテナのバックグラウンド起動
-3. `docker compose exec django ./manage.py makemigrations` および `migrate` : データベースのテーブル作成・マイグレーション
-4. `docker compose exec django ./manage.py collectstatic --noinput` : 静的ファイル（CSSや画像など）の収集
+### 4. システムの一括セットアップ・起動
 
-### 4. 起動の確認
+環境変数が用意できたら、リポジトリ直下にある `init.sh` スクリプトを実行します。これにより、Docker コンテナのビルドから起動、データベースの初期設定（マイグレーション）、静的ファイルの収集などが行われます。
+また、Django独自のアプリケーション用のテーブルが正常に作成されるよう、追加のマイグレーションコマンドも実行します。
+
+```bash
+# コンテナのビルドと起動
+bash ./init.sh
+
+# テーブル不足エラー(SecretKey等)を防ぐため、追加のマイグレーションを実行
+docker compose exec django ./manage.py makemigrations data flightdata frontend
+docker compose exec django ./manage.py migrate
+```
+
+### 5. 初期データの登録
+
+認証用のシークレットキーをデータベースに登録します。このキーはシミュレータや実機センサーがデータを送信する際の認証に使用するまた、サーバー側で照合するための値です。
+
+```bash
+docker compose exec django ./manage.py shell -c \
+  "from data.models import SecretKey; SecretKey.objects.get_or_create(Key='secret')"
+```
+
+> ⚠️ デフォルトのキー値は `secret` です。本番運用時はセキュリティのため任意の文字列に変更し、シミュレータ側の `cli/server.py` 内の `self.SecretKey` 値と一致させてください。
+
+### 6. 起動の確認
 
 以下のコマンドを実行し、4つのコンテナ（`django`, `mysql`, `nginx`, `grafana`）の Status が `Up`（起動中）になっていることを確認します。
 
@@ -50,15 +94,16 @@ bash ./init.sh
 docker compose ps
 ```
 
-### 5. 各種画面へのアクセス
+### 7. 各種画面へのアクセス
 
 起動が完了したら、ブラウザから以下の URL にアクセスして動作を確認できます。
 
 - **ダッシュボード (Grafana)**: [http://localhost:8000/grafana/](http://localhost:8000/grafana/)
   - 初期ログイン ID: `admin` / パスワード: `admin`
+  - 初回ログイン時にパスワード変更を求められる場合は、「スキップ」またはそのまま設定して構いません。
 - **バックエンド管理画面 (Django Admin)**: [http://localhost:8000/admin/](http://localhost:8000/admin/)
 
-### 6. システムの停止・削除
+### 7. システムの停止・削除
 
 開発を終了してコンテナを停止する場合は、プロジェクトディレクトリで以下のコマンドを実行します。
 
@@ -70,7 +115,7 @@ docker compose stop
 docker compose down
 ```
 
-### 7. シミュレータの実行（テストデータの送信）
+### 8. シミュレータの実行（テストデータの送信）
 
 風速計の実機がない環境でも、付属のシミュレータを使ってテストデータを送信できます。WSL 環境の別ターミナルを開いて実行してください。
 
