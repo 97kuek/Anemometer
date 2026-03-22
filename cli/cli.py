@@ -4,6 +4,7 @@ import time
 import curses
 import requests
 import json
+import random
 from requests.exceptions import RequestException, ConnectionError, HTTPError, Timeout
 
 from server import ServerComm
@@ -21,15 +22,21 @@ for i in range(100):
 def post_mode(count):
     # サーバーの syntax_check に合わせる (AID, Time, data) と同時に
     # DataSerializer に合わせるためトップレベルにも要素を配置する
+    
+    # 富士川滑空場（平地）の定常的な風を模したシンプルな乱数モデル
+    wind_speed = max(0.0, random.gauss(1.5, 0.5))
+    wind_direction = (180.0 + random.gauss(0.0, 10.0)) % 360.0
+    
     data={
         'AID': 1,
         'Time': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f"),
-        'WindSpeed': float(count),
-        'WindDirection': 0.0,
+        'WindSpeed': wind_speed,
+        'WindDirection': wind_direction,
         'Latitude': 35.0,
         'Longitude': 135.0,
         'data': {
-            'WindSpeed': count,
+            'WindSpeed': wind_speed,
+            'WindDirection': wind_direction,
             'LHWD': True,
             'LD': True
         }
@@ -49,7 +56,9 @@ def get_mode(count):
             getdata = response_json[0]
             # サーバー側でトップレベルに展開するよう修正したため直接取得する
             wind_speed = getdata.get('WindSpeed', 0.0)
-            graphic.stdscr.addstr(3,40,str(wind_speed)+"m/s",curses.color_pair(1))
+            wind_dir = getdata.get('WindDirection', 0.0)
+            graphic.stdscr.addstr(3,40,f"{wind_speed:.1f} m/s",curses.color_pair(1))
+            graphic.stdscr.addstr(4,40,f"Dir: {wind_dir:.1f} deg",curses.color_pair(1))
     except (json.JSONDecodeError, KeyError, IndexError) as e:
          graphic.stdscr.addstr(3,40,"Error or No Data",curses.color_pair(2))
 
