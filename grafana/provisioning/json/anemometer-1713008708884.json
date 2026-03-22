@@ -1,0 +1,1605 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 7,
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": false,
+      "keepTime": false,
+      "tags": [],
+      "targetBlank": false,
+      "title": "public",
+      "tooltip": "",
+      "type": "link",
+      "url": "anemometer"
+    }
+  ],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "django_restapi"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "max": 7.5,
+          "min": 0,
+          "noValue": "NO DATA",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "#EAB839",
+                "value": 3
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          },
+          "unit": "velocityms"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": 11,
+      "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": true,
+        "showThresholdMarkers": true,
+        "sizing": "auto"
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "AID",
+              "text": "AID",
+              "type": "number"
+            },
+            {
+              "selector": "WindSpeed",
+              "text": "WindSpeed",
+              "type": "number"
+            }
+          ],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "django_restapi"
+          },
+          "filters": [
+            {
+              "field": "AID",
+              "operator": "==",
+              "value": [
+                "1"
+              ]
+            }
+          ],
+          "format": "table",
+          "global_query_id": "",
+          "json_options": {
+            "columnar": false,
+            "root_is_not_array": false
+          },
+          "refId": "AID1",
+          "root_selector": "",
+          "source": "url",
+          "type": "json",
+          "url": "http://nginx/data/LD/",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        },
+        {
+          "columns": [
+            {
+              "selector": "AID",
+              "text": "AID",
+              "type": "number"
+            },
+            {
+              "selector": "WindSpeed",
+              "text": "WindSpeed",
+              "type": "number"
+            }
+          ],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "django_restapi"
+          },
+          "filters": [
+            {
+              "field": "AID",
+              "operator": "==",
+              "value": [
+                "2"
+              ]
+            }
+          ],
+          "format": "table",
+          "global_query_id": "",
+          "hide": false,
+          "json_options": {
+            "columnar": false,
+            "root_is_not_array": false
+          },
+          "refId": "AID2",
+          "root_selector": "",
+          "source": "url",
+          "type": "json",
+          "url": "http://nginx/data/LD/",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        },
+        {
+          "columns": [
+            {
+              "selector": "AID",
+              "text": "AID",
+              "type": "number"
+            },
+            {
+              "selector": "WindSpeed",
+              "text": "WindSpeed",
+              "type": "number"
+            }
+          ],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "django_restapi"
+          },
+          "filters": [
+            {
+              "field": "AID",
+              "operator": "==",
+              "value": [
+                "3"
+              ]
+            }
+          ],
+          "format": "table",
+          "global_query_id": "",
+          "hide": false,
+          "json_options": {
+            "columnar": false,
+            "root_is_not_array": false
+          },
+          "refId": "AID3",
+          "root_selector": "",
+          "source": "url",
+          "type": "json",
+          "url": "http://nginx/data/LD/",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "WindSpeed",
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "AID1 WindSpeed",
+                "AID2 WindSpeed",
+                "AID3 WindSpeed"
+              ]
+            }
+          }
+        }
+      ],
+      "type": "gauge"
+    },
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "django_restapi"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "AID"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 37
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Memo"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 153
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "WindSpeed"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 108
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "WindDirection"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 116
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "id": 5,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "AID",
+              "text": "AID",
+              "type": "number"
+            },
+            {
+              "selector": "Memo",
+              "text": "Memo",
+              "type": "string"
+            },
+            {
+              "selector": "WindSpeed",
+              "text": "WindSpeed",
+              "type": "number"
+            },
+            {
+              "selector": "WindDirection",
+              "text": "WindDirection",
+              "type": "number"
+            },
+            {
+              "selector": "Time",
+              "text": "LastUpload",
+              "type": "timestamp"
+            }
+          ],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "django_restapi"
+          },
+          "filters": [],
+          "format": "table",
+          "global_query_id": "",
+          "refId": "A",
+          "root_selector": "",
+          "source": "url",
+          "type": "json",
+          "url": "http://nginx/data/LD/",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "Panel Title",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "django_restapi"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 5
+      },
+      "id": 6,
+      "options": {
+        "basemap": {
+          "config": {
+            "server": "streets"
+          },
+          "name": "Layer 0",
+          "type": "esri-xyz"
+        },
+        "controls": {
+          "mouseWheelZoom": false,
+          "showAttribution": true,
+          "showDebug": false,
+          "showMeasure": false,
+          "showScale": false,
+          "showZoom": false
+        },
+        "layers": [
+          {
+            "config": {
+              "showLegend": false,
+              "style": {
+                "color": {
+                  "fixed": "dark-red"
+                },
+                "opacity": 0.1,
+                "rotation": {
+                  "fixed": 0,
+                  "max": 360,
+                  "min": -360,
+                  "mode": "mod"
+                },
+                "size": {
+                  "fixed": 10,
+                  "max": 15,
+                  "min": 2
+                },
+                "symbol": {
+                  "fixed": "img/icons/marker/circle.svg",
+                  "mode": "fixed"
+                },
+                "symbolAlign": {
+                  "horizontal": "center",
+                  "vertical": "center"
+                },
+                "text": {
+                  "field": "AID",
+                  "fixed": "",
+                  "mode": "field"
+                },
+                "textConfig": {
+                  "fontSize": 12,
+                  "offsetX": 0,
+                  "offsetY": 0,
+                  "textAlign": "center",
+                  "textBaseline": "middle"
+                }
+              }
+            },
+            "filterData": {
+              "id": "byRefId",
+              "options": "AID1"
+            },
+            "location": {
+              "mode": "auto"
+            },
+            "name": "AID1",
+            "tooltip": true,
+            "type": "markers"
+          },
+          {
+            "config": {
+              "showLegend": false,
+              "style": {
+                "color": {
+                  "fixed": "dark-orange"
+                },
+                "opacity": 0.1,
+                "rotation": {
+                  "fixed": 0,
+                  "max": 360,
+                  "min": -360,
+                  "mode": "mod"
+                },
+                "size": {
+                  "fixed": 10,
+                  "max": 15,
+                  "min": 2
+                },
+                "symbol": {
+                  "fixed": "img/icons/marker/circle.svg",
+                  "mode": "fixed"
+                },
+                "symbolAlign": {
+                  "horizontal": "center",
+                  "vertical": "center"
+                },
+                "text": {
+                  "field": "AID",
+                  "fixed": "",
+                  "mode": "field"
+                },
+                "textConfig": {
+                  "fontSize": 12,
+                  "offsetX": 0,
+                  "offsetY": 0,
+                  "textAlign": "center",
+                  "textBaseline": "middle"
+                }
+              }
+            },
+            "filterData": {
+              "id": "byRefId",
+              "options": "AID2"
+            },
+            "location": {
+              "mode": "auto"
+            },
+            "name": "AID2",
+            "tooltip": true,
+            "type": "markers"
+          },
+          {
+            "config": {
+              "showLegend": false,
+              "style": {
+                "color": {
+                  "fixed": "dark-blue"
+                },
+                "opacity": 0.1,
+                "rotation": {
+                  "fixed": 0,
+                  "max": 360,
+                  "min": -360,
+                  "mode": "mod"
+                },
+                "size": {
+                  "fixed": 9,
+                  "max": 15,
+                  "min": 2
+                },
+                "symbol": {
+                  "fixed": "img/icons/marker/circle.svg",
+                  "mode": "fixed"
+                },
+                "symbolAlign": {
+                  "horizontal": "center",
+                  "vertical": "center"
+                },
+                "text": {
+                  "fixed": "",
+                  "mode": "field"
+                },
+                "textConfig": {
+                  "fontSize": 12,
+                  "offsetX": 0,
+                  "offsetY": 0,
+                  "textAlign": "center",
+                  "textBaseline": "middle"
+                }
+              }
+            },
+            "filterData": {
+              "id": "byRefId",
+              "options": "AID3"
+            },
+            "location": {
+              "mode": "auto"
+            },
+            "name": "AID3",
+            "tooltip": true,
+            "type": "markers"
+          }
+        ],
+        "tooltip": {
+          "mode": "details"
+        },
+        "view": {
+          "allLayers": true,
+          "id": "fit",
+          "lat": 0,
+          "lon": 0,
+          "zoom": 15
+        }
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "AID",
+              "text": "AID",
+              "type": "number"
+            },
+            {
+              "selector": "Latitude",
+              "text": "Latitude",
+              "type": "string"
+            },
+            {
+              "selector": "Longitude",
+              "text": "Longitude",
+              "type": "string"
+            }
+          ],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "django_restapi"
+          },
+          "filters": [
+            {
+              "field": "AID",
+              "operator": "==",
+              "value": [
+                "1"
+              ]
+            }
+          ],
+          "format": "table",
+          "global_query_id": "",
+          "refId": "AID1",
+          "root_selector": "",
+          "source": "url",
+          "type": "json",
+          "url": "http://nginx/data/LD/",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        },
+        {
+          "columns": [
+            {
+              "selector": "AID",
+              "text": "AID",
+              "type": "number"
+            },
+            {
+              "selector": "Latitude",
+              "text": "Latitude",
+              "type": "string"
+            },
+            {
+              "selector": "Longitude",
+              "text": "Longitude",
+              "type": "string"
+            }
+          ],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "django_restapi"
+          },
+          "filters": [
+            {
+              "field": "AID",
+              "operator": "==",
+              "value": [
+                "2"
+              ]
+            }
+          ],
+          "format": "table",
+          "global_query_id": "",
+          "hide": false,
+          "refId": "AID2",
+          "root_selector": "",
+          "source": "url",
+          "type": "json",
+          "url": "http://nginx/data/LD/",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        },
+        {
+          "columns": [
+            {
+              "selector": "AID",
+              "text": "AID",
+              "type": "number"
+            },
+            {
+              "selector": "Latitude",
+              "text": "Latitude",
+              "type": "string"
+            },
+            {
+              "selector": "Longitude",
+              "text": "Longitude",
+              "type": "string"
+            }
+          ],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "django_restapi"
+          },
+          "filters": [
+            {
+              "field": "AID",
+              "operator": "==",
+              "value": [
+                "3"
+              ]
+            }
+          ],
+          "format": "table",
+          "global_query_id": "",
+          "hide": false,
+          "refId": "AID3",
+          "root_selector": "",
+          "source": "url",
+          "type": "json",
+          "url": "http://nginx/data/LD/",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "Panel Title",
+      "type": "geomap"
+    },
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "django_restapi"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 1,
+          "fieldMinMax": false,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "degree"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 4,
+        "x": 0,
+        "y": 9
+      },
+      "id": 7,
+      "options": {
+        "allowNeedleCrossLimits": true,
+        "animateNeedleValueTransition": true,
+        "animateNeedleValueTransitionSpeed": 100,
+        "edgeWidth": 0.05,
+        "gaugeRadius": 0,
+        "innerColor": "#ffffff",
+        "markerEndEnabled": true,
+        "markerEndShape": "arrow",
+        "markerStartEnabled": false,
+        "markerStartShape": "circle",
+        "maxNeedleAngle": 540,
+        "maxTickAngle": 540,
+        "maxValue": 360,
+        "minValue": 0,
+        "needleColor": "semi-dark-red",
+        "needleCrossLimitDegrees": 10,
+        "needleLengthNeg": 0,
+        "needleTickGap": 0.05,
+        "needleWidth": 5,
+        "operatorName": "last",
+        "outerEdgeColor": "#0099cc",
+        "padding": 0.05,
+        "pivotColor": "#999999",
+        "pivotRadius": 0.1,
+        "showThresholdBandLowerRange": true,
+        "showThresholdBandMiddleRange": true,
+        "showThresholdBandOnGauge": false,
+        "showThresholdBandUpperRange": true,
+        "showThresholdStateOnBackground": false,
+        "showThresholdStateOnValue": false,
+        "tickEdgeGap": 0.05,
+        "tickFont": "Inter",
+        "tickLabelColor": "#000000",
+        "tickLabelFontSize": 18,
+        "tickLengthMaj": 0.15,
+        "tickLengthMin": 0.05,
+        "tickMajorColor": "#0099CC",
+        "tickMapConfig": {
+          "tickMaps": [
+            {
+              "enabled": true,
+              "label": "North",
+              "order": 0,
+              "text": "NORTH",
+              "value": "0"
+            },
+            {
+              "enabled": true,
+              "label": "East",
+              "order": 1,
+              "text": "EAST",
+              "value": "90"
+            },
+            {
+              "enabled": true,
+              "label": "NorthEast",
+              "order": 2,
+              "text": "NE",
+              "value": "45"
+            },
+            {
+              "enabled": true,
+              "label": "SouthEast",
+              "order": 3,
+              "text": "SE",
+              "value": "135"
+            },
+            {
+              "enabled": true,
+              "label": "Sorth",
+              "order": 4,
+              "text": "SOUTH",
+              "value": "180"
+            },
+            {
+              "enabled": true,
+              "label": "SouthWest",
+              "order": 5,
+              "text": "SW",
+              "value": "225"
+            },
+            {
+              "enabled": true,
+              "label": "West",
+              "order": 6,
+              "text": "WEST",
+              "value": "270"
+            },
+            {
+              "enabled": true,
+              "label": "NorthWest",
+              "order": 7,
+              "text": "NW",
+              "value": "315"
+            }
+          ]
+        },
+        "tickMinorColor": "#000000",
+        "tickSpacingMajor": 45,
+        "tickSpacingMinor": 5,
+        "tickWidthMajor": 5,
+        "tickWidthMinor": 1,
+        "ticknessGaugeBasis": 200,
+        "unitsLabelColor": "#000000",
+        "valueFont": "Inter",
+        "valueFontSize": 30,
+        "valueYOffset": -40,
+        "zeroNeedleAngle": 180,
+        "zeroTickAngle": 180
+      },
+      "pluginVersion": "2.0.1",
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "AID",
+              "text": "AID",
+              "type": "number"
+            },
+            {
+              "selector": "WindDirection",
+              "text": "WindDirection",
+              "type": "number"
+            }
+          ],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "django_restapi"
+          },
+          "filters": [
+            {
+              "field": "AID",
+              "operator": "==",
+              "value": [
+                "1"
+              ]
+            }
+          ],
+          "format": "table",
+          "global_query_id": "",
+          "refId": "A",
+          "root_selector": "",
+          "source": "url",
+          "type": "json",
+          "url": "http://nginx/data/LD/",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "AID1 WindDirection",
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "WindDirection"
+              ]
+            }
+          }
+        }
+      ],
+      "type": "briangann-gauge-panel"
+    },
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "django_restapi"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 1,
+          "fieldMinMax": false,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "degree"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 4,
+        "x": 4,
+        "y": 9
+      },
+      "id": 15,
+      "options": {
+        "allowNeedleCrossLimits": true,
+        "animateNeedleValueTransition": true,
+        "animateNeedleValueTransitionSpeed": 100,
+        "edgeWidth": 0.05,
+        "gaugeRadius": 0,
+        "innerColor": "#ffffff",
+        "markerEndEnabled": true,
+        "markerEndShape": "arrow",
+        "markerStartEnabled": false,
+        "markerStartShape": "circle",
+        "maxNeedleAngle": 540,
+        "maxTickAngle": 540,
+        "maxValue": 360,
+        "minValue": 0,
+        "needleColor": "semi-dark-red",
+        "needleCrossLimitDegrees": 10,
+        "needleLengthNeg": 0,
+        "needleTickGap": 0.05,
+        "needleWidth": 5,
+        "operatorName": "last",
+        "outerEdgeColor": "#0099cc",
+        "padding": 0.05,
+        "pivotColor": "#999999",
+        "pivotRadius": 0.1,
+        "showThresholdBandLowerRange": true,
+        "showThresholdBandMiddleRange": true,
+        "showThresholdBandOnGauge": false,
+        "showThresholdBandUpperRange": true,
+        "showThresholdStateOnBackground": false,
+        "showThresholdStateOnValue": false,
+        "tickEdgeGap": 0.05,
+        "tickFont": "Inter",
+        "tickLabelColor": "#000000",
+        "tickLabelFontSize": 18,
+        "tickLengthMaj": 0.15,
+        "tickLengthMin": 0.05,
+        "tickMajorColor": "#0099CC",
+        "tickMapConfig": {
+          "tickMaps": [
+            {
+              "enabled": true,
+              "label": "North",
+              "order": 0,
+              "text": "NORTH",
+              "value": "0"
+            },
+            {
+              "enabled": true,
+              "label": "East",
+              "order": 1,
+              "text": "EAST",
+              "value": "90"
+            },
+            {
+              "enabled": true,
+              "label": "NorthEast",
+              "order": 2,
+              "text": "NE",
+              "value": "45"
+            },
+            {
+              "enabled": true,
+              "label": "SouthEast",
+              "order": 3,
+              "text": "SE",
+              "value": "135"
+            },
+            {
+              "enabled": true,
+              "label": "Sorth",
+              "order": 4,
+              "text": "SOUTH",
+              "value": "180"
+            },
+            {
+              "enabled": true,
+              "label": "SouthWest",
+              "order": 5,
+              "text": "SW",
+              "value": "225"
+            },
+            {
+              "enabled": true,
+              "label": "West",
+              "order": 6,
+              "text": "WEST",
+              "value": "270"
+            },
+            {
+              "enabled": true,
+              "label": "NorthWest",
+              "order": 7,
+              "text": "NW",
+              "value": "315"
+            }
+          ]
+        },
+        "tickMinorColor": "#000000",
+        "tickSpacingMajor": 45,
+        "tickSpacingMinor": 5,
+        "tickWidthMajor": 5,
+        "tickWidthMinor": 1,
+        "ticknessGaugeBasis": 200,
+        "unitsLabelColor": "#000000",
+        "valueFont": "Inter",
+        "valueFontSize": 30,
+        "valueYOffset": -40,
+        "zeroNeedleAngle": 180,
+        "zeroTickAngle": 180
+      },
+      "pluginVersion": "2.0.1",
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "AID",
+              "text": "AID",
+              "type": "number"
+            },
+            {
+              "selector": "WindDirection",
+              "text": "WindDirection",
+              "type": "number"
+            }
+          ],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "django_restapi"
+          },
+          "filters": [
+            {
+              "field": "AID",
+              "operator": "==",
+              "value": [
+                "2"
+              ]
+            }
+          ],
+          "format": "table",
+          "global_query_id": "",
+          "refId": "A",
+          "root_selector": "",
+          "source": "url",
+          "type": "json",
+          "url": "http://nginx/data/LD/",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "AID2 WindDirection",
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "WindDirection"
+              ]
+            }
+          }
+        }
+      ],
+      "type": "briangann-gauge-panel"
+    },
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "django_restapi"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 1,
+          "fieldMinMax": false,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "degree"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 4,
+        "x": 8,
+        "y": 9
+      },
+      "id": 16,
+      "options": {
+        "allowNeedleCrossLimits": true,
+        "animateNeedleValueTransition": true,
+        "animateNeedleValueTransitionSpeed": 100,
+        "edgeWidth": 0.05,
+        "gaugeRadius": 0,
+        "innerColor": "#ffffff",
+        "markerEndEnabled": true,
+        "markerEndShape": "arrow",
+        "markerStartEnabled": false,
+        "markerStartShape": "circle",
+        "maxNeedleAngle": 540,
+        "maxTickAngle": 540,
+        "maxValue": 360,
+        "minValue": 0,
+        "needleColor": "semi-dark-red",
+        "needleCrossLimitDegrees": 10,
+        "needleLengthNeg": 0,
+        "needleTickGap": 0.05,
+        "needleWidth": 5,
+        "operatorName": "last",
+        "outerEdgeColor": "#0099cc",
+        "padding": 0.05,
+        "pivotColor": "#999999",
+        "pivotRadius": 0.1,
+        "showThresholdBandLowerRange": true,
+        "showThresholdBandMiddleRange": true,
+        "showThresholdBandOnGauge": false,
+        "showThresholdBandUpperRange": true,
+        "showThresholdStateOnBackground": false,
+        "showThresholdStateOnValue": false,
+        "tickEdgeGap": 0.05,
+        "tickFont": "Inter",
+        "tickLabelColor": "#000000",
+        "tickLabelFontSize": 18,
+        "tickLengthMaj": 0.15,
+        "tickLengthMin": 0.05,
+        "tickMajorColor": "#0099CC",
+        "tickMapConfig": {
+          "tickMaps": [
+            {
+              "enabled": true,
+              "label": "North",
+              "order": 0,
+              "text": "NORTH",
+              "value": "0"
+            },
+            {
+              "enabled": true,
+              "label": "East",
+              "order": 1,
+              "text": "EAST",
+              "value": "90"
+            },
+            {
+              "enabled": true,
+              "label": "NorthEast",
+              "order": 2,
+              "text": "NE",
+              "value": "45"
+            },
+            {
+              "enabled": true,
+              "label": "SouthEast",
+              "order": 3,
+              "text": "SE",
+              "value": "135"
+            },
+            {
+              "enabled": true,
+              "label": "Sorth",
+              "order": 4,
+              "text": "SOUTH",
+              "value": "180"
+            },
+            {
+              "enabled": true,
+              "label": "SouthWest",
+              "order": 5,
+              "text": "SW",
+              "value": "225"
+            },
+            {
+              "enabled": true,
+              "label": "West",
+              "order": 6,
+              "text": "WEST",
+              "value": "270"
+            },
+            {
+              "enabled": true,
+              "label": "NorthWest",
+              "order": 7,
+              "text": "NW",
+              "value": "315"
+            }
+          ]
+        },
+        "tickMinorColor": "#000000",
+        "tickSpacingMajor": 45,
+        "tickSpacingMinor": 5,
+        "tickWidthMajor": 5,
+        "tickWidthMinor": 1,
+        "ticknessGaugeBasis": 200,
+        "unitsLabelColor": "#000000",
+        "valueFont": "Inter",
+        "valueFontSize": 30,
+        "valueYOffset": -40,
+        "zeroNeedleAngle": 180,
+        "zeroTickAngle": 180
+      },
+      "pluginVersion": "2.0.1",
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "AID",
+              "text": "AID",
+              "type": "number"
+            },
+            {
+              "selector": "WindDirection",
+              "text": "WindDirection",
+              "type": "number"
+            }
+          ],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "django_restapi"
+          },
+          "filters": [
+            {
+              "field": "AID",
+              "operator": "==",
+              "value": [
+                "3"
+              ]
+            }
+          ],
+          "format": "table",
+          "global_query_id": "",
+          "refId": "A",
+          "root_selector": "",
+          "source": "url",
+          "type": "json",
+          "url": "http://nginx/data/LD/",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "AID3 WindDirection",
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "WindDirection"
+              ]
+            }
+          }
+        }
+      ],
+      "type": "briangann-gauge-panel"
+    },
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "django_restapi"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 13
+      },
+      "id": 14,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "AID",
+              "text": "",
+              "type": "number"
+            },
+            {
+              "selector": "WindSpeed",
+              "text": "",
+              "type": "number"
+            },
+            {
+              "selector": "Time",
+              "text": "",
+              "type": "timestamp"
+            }
+          ],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "django_restapi"
+          },
+          "filters": [
+            {
+              "field": "",
+              "operator": "==",
+              "value": [
+                "1"
+              ]
+            }
+          ],
+          "format": "table",
+          "global_query_id": "",
+          "refId": "AID1",
+          "root_selector": "",
+          "source": "url",
+          "type": "json",
+          "url": "http://nginx/data/LHWD/",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        },
+        {
+          "columns": [
+            {
+              "selector": "AID",
+              "text": "",
+              "type": "number"
+            },
+            {
+              "selector": "WindSpeed",
+              "text": "",
+              "type": "number"
+            },
+            {
+              "selector": "Time",
+              "text": "",
+              "type": "timestamp"
+            }
+          ],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "django_restapi"
+          },
+          "filters": [
+            {
+              "field": "",
+              "operator": "==",
+              "value": [
+                "2"
+              ]
+            }
+          ],
+          "format": "table",
+          "global_query_id": "",
+          "hide": false,
+          "refId": "AID2",
+          "root_selector": "",
+          "source": "url",
+          "type": "json",
+          "url": "http://nginx/data/LHWD/",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        },
+        {
+          "columns": [
+            {
+              "selector": "AID",
+              "text": "",
+              "type": "number"
+            },
+            {
+              "selector": "WindSpeed",
+              "text": "",
+              "type": "number"
+            },
+            {
+              "selector": "Time",
+              "text": "",
+              "type": "timestamp"
+            }
+          ],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "django_restapi"
+          },
+          "filters": [
+            {
+              "field": "",
+              "operator": "==",
+              "value": [
+                "3"
+              ]
+            }
+          ],
+          "format": "table",
+          "global_query_id": "",
+          "hide": false,
+          "refId": "AID3",
+          "root_selector": "",
+          "source": "url",
+          "type": "json",
+          "url": "http://nginx/data/LHWD/",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "Panel Title",
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "Time",
+                "AID1 WindSpeed",
+                "AID2 WindSpeed",
+                "AID3 WindSpeed"
+              ]
+            }
+          }
+        }
+      ],
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "tags": [],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "2024-03-02T02:32:53.952Z",
+    "to": "2024-03-02T12:03:17.719Z"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "anemometer",
+  "uid": "dd49bf54-8590-4d72-bcdc-8442f0c598c1",
+  "version": 2,
+  "weekStart": ""
+}

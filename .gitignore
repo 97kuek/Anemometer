@@ -1,0 +1,5 @@
+mysql/*
+!.env
+src/app/__pycache__/*
+static/*
+.env

@@ -1,0 +1,13 @@
+stages:
+  - deploy
+
+pwd:
+  stage: deploy
+  script:
+    - pwd
+    - ls -al
+    - docker compose down
+    - ./init.sh
+
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "anemometer.tyama.mydns.jp"'

@@ -1,0 +1,19 @@
+[Unit]
+Description=Django_uwsgi
+After=syslog.target
+
+[Service]
+User=root
+#ExecStartPre=-/bin/mkdir -p /var/log/uwsgi
+#ExecStartPre=-/bin/chown -R nginx:nginx /var/log/uwsgi
+ExecStart=/var/www/anemometer/cicd/start.sh &
+Type=simple
+PIDFile=/run/uwsgi/uwsgi.pid
+StandardError=syslog
+NotifyAccess=all
+Restart=always
+KillSignal=SIGQUIT
+
+[Install]
+WantedBy=multi-user.target
+

@@ -1,0 +1,10 @@
+apiVersion: 1
+
+datasources:
+- name: django_restapi
+  type: yesoreyeram-infinity-datasource
+  jsonData:
+    allowedHosts:
+      - 'http://nginx/data/'
+  editable: true
+  uid: django_restapi

@@ -1,0 +1,9 @@
+Django
+uwsgi
+PyMySQL
+djangorestframework
+django-filter
+django-http-method
+apscheduler
+serializers
+requests
