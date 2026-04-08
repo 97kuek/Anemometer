@@ -30,7 +30,7 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-05au2vzguwqw46
 # 環境変数 DJANGO_DEBUG=True の時のみ有効になる
 DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'django', 'anemometer.tyama.mydns.jp']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'django', 'nginx', 'anemometer.tyama.mydns.jp']
 
 
 # Application definition

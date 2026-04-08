@@ -20,10 +20,15 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
       - ./sql:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "anemometer", "-ppassword"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   django:
     build: ./django
-    command: uwsgi --socket :8001 --module anemometer_server.wsgi --py-autoreload 1 
+    command: uwsgi --socket :8001 --module anemometer_server.wsgi --py-autoreload 1
     volumes:
       - ./anemometer_server:/code
       - ./static:/static
@@ -32,7 +37,8 @@ services:
     env_file:
       - ./django/.env
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
 
   grafana:
     image: grafana/grafana
