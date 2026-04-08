@@ -1,7 +1,7 @@
 stages:
   - deploy
 
-pwd:
+deploy:
   stage: deploy
   script:
     - pwd

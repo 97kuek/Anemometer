@@ -1,3 +1,4 @@
+from collections import deque
 import datetime
 import json
 import os
@@ -8,7 +9,6 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-# #13: Firebase URLを環境変数化
 FIREBASE_URL = os.environ.get(
     "FIREBASE_URL",
     "https://optimalis-database-default-rtdb.asia-southeast1.firebasedatabase.app/.json"
@@ -16,21 +16,19 @@ FIREBASE_URL = os.environ.get(
 GETDATA_FILEPATH = os.path.join(os.path.dirname(__file__), "getdata.json")
 
 sess = requests.session()
-# ファイルアクセスの競合を防ぐためのロック (#5)
 _file_lock = threading.Lock()
 
 
 class LatestData():
-    # #2: クラス変数 → インスタンス変数
     def __init__(self):
-        self.LHWD = []
+        self.LHWD = deque(maxlen=1000)
+        self._lock = threading.Lock()
 
     def updateLHWD(self):
         with _file_lock:
             try:
                 with open(GETDATA_FILEPATH, mode='r') as f:
                     lines = f.readlines()
-                # 読み取り後にファイルをクリア
                 with open(GETDATA_FILEPATH, mode='w'):
                     pass
             except FileNotFoundError:
@@ -43,24 +41,24 @@ class LatestData():
             try:
                 data = json.loads(item)
                 data['Time'] = datetime.datetime.strptime(data['Time'], '%Y-%m-%d %H:%M:%S.%f')
-                self.LHWD.append(data)
+                with self._lock:
+                    self.LHWD.append(data)
             except (json.JSONDecodeError, KeyError, ValueError):
                 pass
 
     def checkLHWD(self):
         cutoff = datetime.datetime.now() - datetime.timedelta(hours=1)
-        self.LHWD = [data for data in self.LHWD if data['Time'] >= cutoff]
+        with self._lock:
+            self.LHWD = deque(
+                (data for data in self.LHWD if data['Time'] >= cutoff),
+                maxlen=1000
+            )
 
 
-# #3: fetch_fd=False の二重代入を削除
-fetch_fd = True
 latestdata = LatestData()
 
 
-# #4: 関数名 'get' が requests.session.get と衝突するため改名
 def fetch_flight_data():
-    if not fetch_fd:
-        return
     try:
         response = sess.get(FIREBASE_URL)
         json_data = json.loads(response.text)
@@ -83,15 +81,16 @@ class LHWD(APIView):
     def get(self, request):
         latestdata.updateLHWD()
         latestdata.checkLHWD()
-        return Response(latestdata.LHWD)
+        with latestdata._lock:
+            return Response(list(latestdata.LHWD))
 
 
 class LD(APIView):
     def get(self, request):
         latestdata.updateLHWD()
         cutoff = datetime.datetime.now() - datetime.timedelta(seconds=120)
-        # #10: flightdataにも同じis_there_dataバグが存在したため修正
-        recent = [item for item in latestdata.LHWD if item['Time'] > cutoff]
+        with latestdata._lock:
+            recent = [item for item in latestdata.LHWD if item['Time'] > cutoff]
         if not recent:
             return Response([])
         return Response(max(recent, key=lambda x: x['Time']))

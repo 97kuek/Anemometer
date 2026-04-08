@@ -101,7 +101,7 @@ class WinddataAPIView(APIView):
             return HttpResponse("Authentication Error", status=HTTPStatus.UNAUTHORIZED)
 
         js_body = json.loads(request.body)
-        js_body["Time"] = str(datetime.datetime.now())
+        js_body["Time"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
         modified_body = json.dumps(js_body, separators=(',', ':')).encode('utf-8')
         modified_data = dict(js_body)
 

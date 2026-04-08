@@ -1,233 +1,433 @@
 # Anemometer 引継ぎ資料
 
 ## 1. はじめに
-本ドキュメントは、Anemometerプロジェクトの引継ぎ資料です。
+
+本ドキュメントは、Anemometer プロジェクトの引継ぎ資料です。  
 本プロジェクトは、風向・風速計からネットワーク経由で送信される風速データを収集・保存し、リアルタイムで可視化するシステムです。
-本資料では、ベースとなるインフラ技術・Dockerの基礎から、各サーバーの役割、データフロー、および手元での開発・検証手順について解説します。
 
-## 2. システムの基礎インフラ：Dockerについて
-本プロジェクトを理解するにあたり、最も重要な前提知識が**Docker**です。これを理解することで、システムの全体像が非常に掴みやすくなります。
+基本的なセットアップ手順・起動方法・アクセス先 URL などの **運用手順は [README.md](README.md) を参照してください**。  
+本資料では、システムの技術的な背景・設計判断・コンポーネント詳細・引継ぎ上の注意事項を解説します。
 
-### 2.1 Dockerの主要概念
-プロジェクトの運用において、以下の概念の理解が必要です。
-- **Image（イメージ）**
-  Containerを作成するための設計図のようなものです。例えば「Nginxが入った設計図」や「PythonとDjangoが入った設計図」などが存在します。
-- **Container（コンテナ）**
-  Imageをもとに起動される独立したアプリケーション実行環境です。1つのImageから同じContainerを複数起動することも可能です。
-- **Volume（ボリューム）**
-  **Containerは使い捨てを前提**としており、破棄されると内部のデータも消失します。これを防ぎ、データを永続化（データベースの記録など）するために、ホスト（自身のPC）のストレージ領域をContainerにマウントする仕組みがVolumeです。
-- **Docker Compose**
-  複数のContainer（Webサーバー、DBなど）を連携して管理するためのツールです。`docker-compose.yaml` という設定ファイルに構成を定義し、コマンド一つで連携起動が可能です。
+---
 
-### 2.2 Dockerネットワークとポートフォワーディング
-- **内部DNS**: Dockerネットワーク内では、各ContainerはIPアドレスの代わりにコンテナ名（`django`, `mysql`など）をホスト名として相互通信を行います。
-- **ポートフォワーディング**: ホスト環境（PC）のネットワーク通信を、特定のContainerへ転送する機能です。（例：`8000:80` は、PCの8000番ポートへのアクセスをNginx Container内の80番ポートへ繋ぐ設定です。）
+## 2. システム全体のアーキテクチャ
 
-## 3. 開発環境のセットアップ手順
-ローカル環境で本システムを立ち上げるための具体的な手順です。
+### 2.1 コンポーネント構成
 
-### 3.1 必須要件とインフラの準備
-本システムはDockerを利用しますが、Windows環境で構築を行う場合、ファイルシステムや権限の問題を回避するため、**WSLを利用**してください。
-1. **Docker Desktop for Windows の導入**: インストール後、設定画面で「Use the WSL 2 based engine」が有効になっていることを確認します。
-2. **WSL の導入**: WindowsのPowerShellを管理者権限で開き、`wsl --install` を実行してUbuntu等のLinux環境をインストールします。以降のすべてのターミナル操作は、Windows標準のPowerShellからではなく、**WSLのターミナル上で行うこと**を強く推奨します。
+```
+[センサー / シミュレータ]
+        │ HTTP POST（HMAC署名付き）
+        ▼
+[Nginx] ← ポート8000でリクエストを受け付け
+  │  /grafana/ → [Grafana:3000]（ダッシュボード）
+  │  その他   → [Django:8001]（API サーバー）
+        │
+        ├── メモリキャッシュ（LatestData）
+        │       └── リアルタイム配信用
+        └── [MySQL]（永続化ストレージ）
+                └── 過去データの保存・検索
+```
 
-### 3.2 システムの一括起動
-WSLのターミナルを開き、プロジェクトのディレクトリへ移動します。
+### 2.2 データフロー
+
+1. センサー（またはシミュレータ）が 1 秒ごとに `POST /data/create/` へ送信
+2. Django が HMAC-SHA256 署名を検証
+3. 検証成功後、サーバー時刻で Time を上書きしてデータを保存
+   - MySQL DB（`data_data` テーブル）に永続化
+   - メモリキャッシュ（`LatestData.LHWD`）に追加
+4. Grafana が `GET /data/LD/` を 1 秒間隔でポーリング
+5. Django がメモリキャッシュから最新データを返却（DB アクセスなし）
+
+---
+
+## 3. インフラ技術：Docker の基礎
+
+本プロジェクトを理解する上で最も重要な前提知識が **Docker** です。
+
+### 3.1 主要概念
+
+| 概念 | 説明 |
+|---|---|
+| **Image** | コンテナを作成するための設計図。`Dockerfile` から生成される |
+| **Container** | Image をもとに起動される独立した実行環境 |
+| **Volume** | コンテナは使い捨てが前提なので、データを永続化するためにホストのストレージ領域をマウントする仕組み |
+| **Docker Compose** | 複数コンテナを連携して管理するツール。`docker-compose.yaml` に構成を定義する |
+
+### 3.2 ネットワークとポートフォワーディング
+
+- **内部 DNS**: Docker ネットワーク内では `django`、`mysql` などのコンテナ名でホスト名として相互通信できる
+- **ポートフォワーディング**: ホストのポートをコンテナ内ポートへ転送する（例：`8000:80` は PC の 8000 番を Nginx の 80 番へ転送）
+
+---
+
+## 4. 各コンテナの役割と設定ファイル
+
+### 4.1 Nginx（`nginx:1.25`）
+
+外部からの HTTP リクエストをパスに応じて各コンテナへ振り分けます。
+
+**`nginx/nginx.conf` の主要設定:**
+
+| パス | 転送先 | 説明 |
+|---|---|---|
+| `/static` | `/static`（ファイル直接配信） | CSS・JS 等の静的ファイル |
+| `/grafana/` | `grafana:3000/grafana/` | Grafana ダッシュボード |
+| `/grafana/api/` | `grafana:3000/grafana/api/` | Grafana API（WebSocket 対応） |
+| その他 | `django:8001`（uWSGI 経由） | Django API |
+
+**重要な注意点:** Grafana は `localhost:8000/grafana/` 経由でのみ正常動作します。`localhost:3000` への直接アクセスはリダイレクトエラーになります（`GF_SERVER_ROOT_URL` の設定による）。
+
+### 4.2 Django（Python 3.11 / Django 4.1）
+
+システムのメインロジックです。uWSGI サーバーとして動作しポート 8001 で待機します。
+
+**ディレクトリ構成:**
+```
+anemometer_server/
+├── anemometer_server/    # プロジェクト設定
+│   ├── settings.py       # DB・ミドルウェア・セキュリティ設定
+│   └── urls.py           # ルートルーティング
+├── data/                 # 風速データの受信・保存・配信
+│   ├── models.py         # DB テーブル定義
+│   ├── views.py          # API ロジック
+│   ├── serializers.py    # データ変換・バリデーション
+│   └── urls.py           # /data/ 以下のルーティング
+└── flightdata/           # フライトデータ（Firebase 連携）
+    ├── views.py          # Firebase 取得・キャッシュ・API
+    └── urls.py           # /flightdata/ 以下のルーティング
+```
+
+### 4.3 MySQL（`mysql:8.0`）
+
+風速データを長期保存します。  
+コンテナ起動時に `mysql/.env` の環境変数からデータベース・ユーザーを自動作成します。
+
+**テーブル構成（Django マイグレーションで自動作成）:**
+
+| テーブル名 | 内容 |
+|---|---|
+| `data_data` | 風速データ（Time・AID・data の JSON） |
+| `data_secretkey` | HMAC 認証用の共有鍵 |
+
+### 4.4 Grafana
+
+`grafana/provisioning/` 配下の設定ファイルをコンテナ起動時に自動読み込みします。
+
+| ファイル | 内容 |
+|---|---|
+| `provisioning/datasources/django_restapi.yaml` | Infinity プラグインのデータソース設定 |
+| `provisioning/dashboards/anemometer.yaml` | ダッシュボード定義ファイルの読み込み設定 |
+| `provisioning/json/anemometer-*.json` | ダッシュボードの実際の定義 |
+
+Grafana は MySQL を直接参照せず、**Django の REST API（`/data/LD/` 等）から JSON を取得して描画**する設計になっています。
+
+---
+
+## 5. 環境変数の管理
+
+本システムの設定値は `.env` ファイルで管理しています。**これらのファイルは `.gitignore` により Git 管理対象外**です。
+
+| ファイル | 主な設定内容 |
+|---|---|
+| `mysql/.env` | MySQL の root パスワード・DB 名・ユーザー・パスワード |
+| `django/.env` | Django から MySQL への接続情報（ユーザー・パスワード・DB 名） |
+| `grafana/.env` | Grafana の管理者パスワード・公開 URL・インストールプラグイン |
+
+### settings.py の主要設定
+
+| 設定 | 値 | 説明 |
+|---|---|---|
+| `SECRET_KEY` | 環境変数 `DJANGO_SECRET_KEY` から読込（フォールバックあり） | セッション・CSRF トークンの暗号化 |
+| `DEBUG` | 環境変数 `DJANGO_DEBUG=True` の場合のみ有効 | 本番では必ず `False` |
+| `ALLOWED_HOSTS` | `localhost`, `127.0.0.1`, `django`, `anemometer.tyama.mydns.jp` | アクセスを許可するホスト名 |
+
+---
+
+## 6. コアロジック解説：`data/views.py`
+
+### 6.1 LatestData クラス（メモリキャッシュ）
+
+`LatestData` はサーバー起動時に 1 インスタンスだけ生成され、全リクエストで共有されます。
+
+```python
+latestdata = LatestData()  # モジュールロード時に 1 度だけ生成
+```
+
+| 属性 | 型 | 役割 |
+|---|---|---|
+| `LHWD` | `deque(maxlen=1000)` | 直近データのキャッシュ（最大 1000 件・1 時間以内） |
+| `Anemometer` | `deque(maxlen=256)` | センサーごとの死活状態（Working / Unstable） |
+| `_lock` | `threading.Lock` | 複数リクエストからの同時アクセスを保護 |
+
+**設計上の注意点:**  
+- `deque(maxlen=...)` により、上限を超えると古いデータが自動的に削除されます（メモリリーク防止）
+- `threading.Lock` で全ての読み書きを保護しています（スレッド競合防止）
+
+### 6.2 センサー状態管理（Anemometer）
+
+センサーは AID（Anemometer ID）で識別されます。
+
+| 状態 | 条件 |
+|---|---|
+| `Working` | 最終受信から 15 秒以内 |
+| `Unstable` | 最終受信から 15〜60 秒 |
+| 削除（リストから消える） | 最終受信から 60 秒以上 |
+
+### 6.3 DHCP 機能
+
+センサーが AID 未設定の場合に `/data/DHCP/` へリクエストすると、未使用の AID（1〜100 の整数）を自動割り当てします。
+
+---
+
+## 7. セキュリティ：HMAC-SHA256 認証の仕組み
+
+未認証デバイスからの不正データ送信を防ぐために実装しています。
+
+### 認証フロー
+
+```
+[送信側]
+送信データ（JSON）+ SecretKey
+       ↓ HMAC-SHA256
+    署名値（Base64）
+       ↓ Authorization ヘッダに付与して送信
+
+[受信側 Django]
+受信データ + DB の SecretKey
+       ↓ HMAC-SHA256
+    署名値（Base64）
+       ↓ ヘッダの値と比較
+    一致 → 201 Created
+    不一致 → 401 Unauthorized
+```
+
+### 実装詳細
+
+```python
+# 送信側（cli/server.py）
+psk = hashlib.sha256(secret_key.encode()).digest()
+signature = hmac.new(key=psk, msg=payload, digestmod=hashlib.sha256).digest()
+auth_header = base64.b64encode(signature).decode()
+
+# 受信側（data/views.py）
+key_obj = SecretKey.objects.first()   # DB から取得（0 件なら False を返す）
+secret = hashlib.sha256(key_obj.Key.encode()).digest()
+signature = hmac.new(key=secret, msg=payload, digestmod=hashlib.sha256).digest()
+```
+
+### SecretKey の変更方法
+
 ```bash
-./init.sh
-```
-この起動スクリプト（`init.sh`）内部では、以下の処理が自動で行われています。
-
-1. `docker compose down`: 既存の不要なコンテナを削除し、環境をクリーンにする。
-2. `docker compose up -d --build`: 必要なDocker Imageをビルドし、全コンテナをバックグラウンド（`-d`）で起動する。
-3. `docker compose exec django python manage.py makemigrations` および `migrate`: Djangoモデル定義に従ってMySQLのデータベーステーブルを自動作成する。
-4. `docker compose exec django python manage.py collectstatic`: Nginxが配信するための静的ファイル（CSSや画像など）を一箇所に収集する。
-
-起動後、`docker compose ps` を実行し、`django`, `mysql`, `nginx`, `grafana` の4つのコンテナのStatusが「Up（起動中）」になっていれば成功です。
-
-## 4. ディレクトリ構成と環境変数ガイド
-開発をスムーズに進めるため、「どこに何があるか」の全体マップと、機密情報が含まれる設定ファイル（環境変数）の管理について記載します。
-
-### 4.1 主要なディレクトリ構成（全体マップ）
-プロジェクトルートには多くのフォルダが存在しますが、主に触るべき階層は以下の通りです。
-```text
-Anemometer/
-│
-├─ anemometer_server/  # Djangoプロジェクトの本体（バックエンド）
-│   ├─ data/           # メイン機能（風速データ保存とAPI配信）を持つアプリケーション
-│   │   ├─ models.py   # DBのテーブル定義
-│   │   ├─ views.py    # メインロジック（HMAC検証、保存、データ返送）
-│   │   └─ urls.py     # '/data/' 以下のルーティング
-│   └─ urls.py         # 大元のルーティング（/admin/ や /data/ の振り分け）
-│
-├─ cli/                # 開発・テスト用のシミュレータ環境
-│   ├─ cli.py          # ターミナル描画とデータ生成のメインスクリプト
-│   └─ server.py       # HMAC署名付与とHTTP POST送信ロジック
-│
-├─ grafana/            # Grafana環境および設定
-│   ├─ .env            # Grafanaコンテナ用の環境変数（アクセスパス等）
-│   └─ provisioning/   # 起動時に自動で読み込まれるダッシュボードとデータソース設定ファイル群
-│
-├─ mysql/              # （旧）ローカルマウント用ディレクトリ（現在は名前付きVolumeに移行済みのため使用しません）
-├─ nginx/              # Nginxサーバー設定
-│   └─ nginx.conf      # エンドポイントのプロキシ振り分け定義
-│
-├─ sql/                # MySQL初期化設定
-│   └─ init.sql        # 初回起動時にDBユーザー・権限を作成するファイル
-│
-├─ docker-compose.yaml # 各コンテナの連携・起動定義（ポートやVolumeの設定元）
-└─ init.sh             # 開発環境の一括セットアップ・起動スクリプト
+# Django 管理画面（/admin/）から GUI で変更するか、シェルで直接操作
+docker compose exec django ./manage.py shell -c \
+  "from data.models import SecretKey; SecretKey.objects.all().delete(); SecretKey.objects.create(Key='新しいキー')"
 ```
 
-### 4.2 環境変数（設定値）の管理
-本システムにおけるパスワードやポート番号などの設定値は、各所に分散して定義されています。変更が必要な場合は以下を確認してください。
+変更後は、シミュレータ側の環境変数も合わせて変更してください：
 
-- **`docker-compose.yaml` 内の環境変数**
-  `mysql` コンテナのセクションにおいて、`MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_ROOT_PASSWORD` といったデーターベース関連の認証情報が直接記載されています。セキュリティを高める場合は、将来的に環境変数ファイル（`.env`）から読み込む構成への変更を検討してください。
-- **`grafana/.env`**
-  Grafanaコンテナ用の設定ファイルです。特に `GF_SERVER_ROOT_URL` は「ユーザーがGrafanaへアクセスする際の基準URL」を定義しており、現在はNginx経由であることを示すため `http://localhost:8000/grafana/` に相当する指定（ポート8000番経由）がなされています。
-- **Djangoの暗号化キー（`SecretKey`）**
-  ファイルには保存されておらず、本システムではMySQLデータベースの `data_secretkey` テーブルに直接1行ずつ格納されています（現状は "secret" という文字列）。これを変更する際は、DBの中身を直接SQLで書き換えるか、Djangoの管理画面（admin）からGUIで変更および追加発行を行う必要があります。
-
-## 5. 開発・検証用エンドポイント一覧（チートシート）
-ローカル開発中に頻繁にアクセスするURLのチートシートです。ブラウザのブックマークに追加しておくことを推奨します。
-
-- **サイトトップ（Dashboard）**
-  👉 [http://localhost:8000/grafana/](http://localhost:8000/grafana/)
-  ※Nginxを経由してGrafanaコンテナへ転送されます。ログイン初期ID / Password は `admin` / `admin` です。
-- **Django管理・メンテナンス画面**
-  👉 [http://localhost:8000/admin/](http://localhost:8000/admin/)
-  ※スーパーユーザーを作成済みであれば、ここからDB内の暗号化キー（SecretKey）などをグラフィカルに確認・編集・追加できます。
-- **風速データの受信用API（POST専用）**
-  👉 `http://localhost:8000/data/create/`
-  ※シミュレータ等の実機がHTTP POSTを送信する先の窓口です。通常ブラウザで開いても `Method Not Allowed` になります。
-- **グラフ描画・データ取得用API（GET専用）**
-  👉 [http://localhost:8000/data/LD/](http://localhost:8000/data/LD/)
-  ※Grafana（Infinity Plugin）が1秒間隔で定期的に読み込んでいるAPIです。ブラウザで直接開くと、現在サーバーのメモリにキャッシュされている最新のJSONデータ（生データ）をそのまま閲覧できるため、不具合検証やデバッグ時に非常に有用です。
-
-## 6. 各コンテナの役割と主要ソースコードの解説
-本プロジェクトは、4つのContainerとその内部のソースコードが協調して動作しています。それぞれの役割と、関与する重要なコードについて解説します。
-
-### 6.1 Nginx (Webサーバー / リバースプロキシ)
-外部からのHTTPリクエストを最初に受け付けます。URLのパスを解析し、通信を適切なコンテナへ転送（プロキシ）します。また、画像などの静的ファイルはNginxが直接配信し、Djangoへの負荷を軽減します。
-- **`nginx/nginx.conf`**
-  Nginxのルーティング設定ファイルです。`location /grafana/` へのアクセスはポート3000番へプロキシ転送し、それ以外の通信（`location /`）は `upstream django_8001` で定義されたDjangoコンテナへ `uwsgi_pass` を使って流すように設定されています。
-
-### 6.2 Django (バックエンド / APIサーバー)
-Python製のWebフレームワークを利用し、システムのメインロジック処理およびREST APIを提供します。
-- **`anemometer_server/urls.py` および `data/urls.py`**
-  URLルーティングを定義しています。「どのURLにアクセスされたら、どの処理（View）を呼び出すか」をマッピングします。
-- **`anemometer_server/data/models.py`**
-  データベースのスキーマ（テーブル構造）を定義します。HMAC認証に利用する共有鍵を格納する `SecretKey` モデルと、風速データを格納する `Data` モデルが存在します。`Data` において各種の測定値は個別のカラムではなく、`data`という1つの `JSONField` に格納されており、将来のセンサー項目の追加に柔軟に対応できる設計となっています。
-- **`anemometer_server/data/views.py`**
-  システムの中心となる制御ロジックです。
-  * `WinddataAPIView` (受信用API): シミュレータからデータを受信します。リクエストヘッダーの「Authorization（HMAC-SHA256署名）」をデータベース上のSecretKeyを用いて検証後、サーバーの現在時刻を上書きして保存（`save()`）します。
-  * `updateLHWD` (キャッシュ領域): 最新データを直近データリスト（キャッシュ）である `LHWD` へ追加します。ここでGrafanaが理解しやすくなるよう、JSON階層のネストを解除し、フラットな構造に展開している点が重要です。
-  * `LD` (配信用API): Grafanaから定期的にアクセスされるAPIエンドポイントです。データベースの全検索を行わず、メモリ上の `LHWD` にキャッシュされた最新データを即座にJSON形式で返却します。
-
-### 6.3 MySQL (データベース)
-Djangoが受け取った風速データを長期的に永続化・保存します。
-- **`sql/init.sql`**
-  MySQLコンテナの初回作成時に一度だけ自動実行される初期化スクリプトです。環境変数と同名の特定ユーザーに対し、利用するデータベースへのフルアクセス権限を付与（GRANT）しています。
-
-### 6.4 Grafana (ダッシュボード / 可視化)
-システムのデータを美麗なグラフや計器（ダッシュボード）として描画します。
-- **Provisioning機能**
-  `grafana/provisioning` 配下の設定ファイル（JSON等）を自動的に読み込むことで、コンテナ起動時にデータソースやダッシュボードを一切の手作業なしで構築します。
-- **Infinity Data Source Plugin**
-  MySQLを直接参照するのではなく、このプラグインを使用してDjangoの配信用REST API（`/data/LD/` 等）へアクセスし、そこから得たJSONデータを描画するアーキテクチャを採用しています。
-
-## 7. データベースのマイグレーション運用手順
-開発中にDjangoのモデル定義（テーブル構成）を変更した場合、マイグレーションという手順を踏んでデータベースに反映させる必要があります。
-
-### 7.1 マイグレーションの作成と適用
-`anemometer_server/data/models.py` を修正した後は、以下のコマンドを順番に実行します。
 ```bash
-# 1. 変更内容を元にマイグレーションファイル（設計図）を作成する
-docker compose exec django python manage.py makemigrations
-
-# 2. 作成したマイグレーションを実際のMySQLのテーブルに適用する
-docker compose exec django python manage.py migrate
+ANEMOMETER_SECRET_KEY=新しいキー python3 cli.py
 ```
-新規追加されたマイグレーションファイル（`anemometer_server/data/migrations/` 以下に生成されます）は**必ずGitにコミット**し、チーム間で共有するようにしてください。これにより、他者が `init.sh` を実行した際にも自動で同じスキーマが適用されるようになります。
 
-## 8. セキュリティ：HMAC-SHA256認証の仕組み
-未認証デバイスからの不正なデータ送信を防ぐため、共有鍵（SecretKey）による認証を実装しています。
-1. **送信側**: 送信するデータ本体と、SecretKeyという文字列を組み合わせ、HMAC-SHA256アルゴリズムでハッシュ値（電子署名）を生成し、HTTPリクエストヘッダーに付与して送信します。
-2. **受信側（Django）**: 受け取ったデータと、データベースに保存されているSecretKeyを用いて、サーバー側でも再度ハッシュ値を計算します。
-3. **検証**: シミュレータとサーバー、両者のハッシュ値を照合します。不一致の場合やヘッダーが存在しない場合は、データ改ざんまたは不正アクセスとみなし、`401 Unauthorized` エラーを返却して処理を中断します。
+---
 
-## 9. シミュレータ（クライアント環境）の利用方法
-実機の代替として、テスト用の風速データを継続的に生成・送信するシミュレータが用意されています。
+## 8. フライトデータ機能（flightdata アプリ）
 
-### 9.1 主要ソースコードの解説
-- **`cli/cli.py`**
-  ターミナル上でリッチなUIを描画する `curses` ライブラリを利用しており、`asyncio` による非同期ループで1秒に1回データの送信と最新データの取得を繰り返すメインスクリプトです。
-- **`cli/server.py`**
-  Djangoサーバーとの実際のHTTP通信を担当するモジュールです。`hmac` と `hashlib` モジュールを利用し、あらかじめ合意された `SecretKey`（例: 文字列 "secret"）を用いてSHA-256署名を動的に生成し、ヘッダーに付与して通信を実行します。
+Firebase Realtime Database から 2 秒ごとにフライトデータ（グライダーの飛行情報）を取得して配信する機能です。
 
-### 9.2 実行方法
-WSLのターミナルを使用し、以下の手順で実行します。
+### 動作の仕組み
+
+```
+[Firebase Realtime Database]
+        │ 2秒ごとに fetch（バックグラウンドスケジューラ）
+        ▼
+[getdata.json]（一時ファイル）
+        │ GETリクエスト時に読み込み＆クリア
+        ▼
+[LatestData.LHWD]（メモリキャッシュ）
+        │
+        ▼
+[GET /flightdata/LD/ または /flightdata/LHWD/]
+```
+
+### Firebase URL の設定
+
+デフォルトの Firebase URL は `flightdata/views.py` の環境変数で上書きできます：
+
 ```bash
-cd cli
-pip3 install requests  # 初回のみ実行
-python3 cli.py
+# django/.env に追記
+FIREBASE_URL=https://your-database.firebaseio.com/.json
 ```
-※ 非同期処理機能（`asyncio`）や高度なターミナル描画を使用しているため、Windows標準のコマンドプロンプト等ではなく、必ずWSL環境で実行してください。
 
-### 9.3 停止およびデータの変更
-- 停止する場合は、キーボードの `Ctrl + C` を入力します。
-- 送信データを変更したい場合（風向などのダミー値の追加）は、`cli.py`内の `post_mode` 関数内に定義されているJSONのペイロードや演算ロジックを修正することで対応可能です。
+### API エンドポイント
 
-## 10. Grafanaダッシュボードの編集・保存（エクスポート）手順
-GrafanaはブラウザのGUIから簡単にグラフを追加・編集できますが、そのままではコンテナを破棄・再構築した際に変更が消えてしまいます。以下の手順で設定をファイルとして永続化（プロビジョニング）してください。
+| パス | 説明 |
+|---|---|
+| `/flightdata/LD/` | 直近 2 分以内の最新フライトデータ（1 件） |
+| `/flightdata/LHWD/` | 直近 1 時間以内のフライトデータ一覧 |
 
-1. **画面上での編集**: `http://localhost:8000/grafana/` へアクセスし、ダッシュボードを自由に編集・保存します。
-2. **JSON出力**: 画面上部の「Dashboard settings (歯車アイコン)」>「JSON Model」を開き、表示されているJSONテキストをすべてコピーします。
-3. **ファイルへの保存**:
-   リポジトリ内の `grafana/provisioning/json/anemometer-*.json` などの既存ファイルの中身を、コピーしたJSONの内容で上書き（または新規作成して `dashboards/anemometer.yaml` に参照を追記）し、Gitへコミットします。
-この手順を踏むことで、後日他者が新しくDockerを立ち上げた際にも、自分が編集した最新のダッシュボードが自動で構築されるようになります。
+---
 
-## 11. 自動テストの実行方法
-コードの品質を担保し、機能変更時のデグレード（改悪）を防ぐため、自動テストの仕組みが用意されています。
+## 9. API エンドポイント一覧
 
-### 11.1 Django（バックエンド）のテスト
-Django側のテストコードは `anemometer_server/data/tests.py` 等に記述されています。以下のコマンドでテストを実行し、エラーが発生しない（`OK` が表示される）ことを確認してください。
+### 風速データ（`/data/`）
+
+| メソッド | パス | 説明 | 認証 |
+|---|---|---|---|
+| `POST` | `/data/create/` | センサーデータの受信 | HMAC 必須 |
+| `GET` | `/data/LD/` | 各センサーの最新値（1 件/センサー） | なし |
+| `GET` | `/data/LHWD/` | 直近 1 時間分の全データ | なし |
+| `GET` | `/data/Anemometer/` | 全センサーの死活状態 | なし |
+| `GET` | `/data/filter/?datetime_range=開始,終了` | 期間指定検索（最大 1000 件） | なし |
+| `GET` | `/data/DHCP/` | 未使用 AID の自動割り当て | なし |
+
+**`/data/create/` のリクエスト形式:**
+
+```json
+{
+  "AID": 1,
+  "Time": "2024-01-01 12:00:00.000000",
+  "WindSpeed": 3.5,
+  "WindDirection": 180.0,
+  "Latitude": 35.11972,
+  "Longitude": 138.63194,
+  "data": {
+    "WindSpeed": 3.5,
+    "WindDirection": 180.0,
+    "Latitude": 35.11972,
+    "Longitude": 138.63194,
+    "LHWD": true,
+    "LD": true
+  }
+}
+```
+
+**`datetime_range` の書式:**  
+`?datetime_range=2024-01-01T00:00:00,2024-01-01T23:59:59`
+
+---
+
+## 10. マイグレーション運用手順
+
+`data/models.py` などのモデルを変更した場合、必ず以下の手順で DB へ反映してください。
+
 ```bash
-docker compose exec django python manage.py test
+# 1. 変更差分からマイグレーションファイルを生成
+docker compose exec django ./manage.py makemigrations
+
+# 2. DB へ適用
+docker compose exec django ./manage.py migrate
 ```
 
-### 11.2 シミュレータのテスト
-シミュレータ等のCLIツールに関する一部のテストは `cli/jsontest.py` などに存在します。WSL環境で以下のように実行します。
+生成されたマイグレーションファイル（`data/migrations/` 以下）は **必ず Git にコミット**してください。これにより他者が `init.sh` を実行した際にも同じスキーマが自動適用されます。
+
+---
+
+## 11. Grafana ダッシュボードの永続化手順
+
+Grafana の変更はデフォルトでコンテナ内に保存されるため、コンテナを再作成すると消えます。以下の手順でファイルとして永続化してください。
+
+1. `http://localhost:8000/grafana/` でダッシュボードを編集・保存
+2. 画面上部の「Dashboard settings（歯車）」→「JSON Model」を開く
+3. 表示された JSON を全コピーする
+4. `grafana/provisioning/json/anemometer-*.json` の中身を上書き保存
+5. Git にコミットする
+
+---
+
+## 12. CI/CD パイプライン
+
+`.gitlab-ci.yml` に定義されており、特定ブランチへのプッシュで本番サーバーへ自動デプロイされます。
+
+```yaml
+# ブランチ名が "anemometer.tyama.mydns.jp" の場合に自動実行
+rules:
+  - if: '$CI_COMMIT_BRANCH == "anemometer.tyama.mydns.jp"'
+```
+
+**デプロイの流れ:**
+1. 対象ブランチへプッシュ
+2. GitLab Runner が起動
+3. `docker compose down` → `./init.sh` を実行
+4. 新しいコードでコンテナが再ビルド・起動
+
+---
+
+## 13. シミュレータの仕様
+
+### cli/cli.py
+
+`curses` ライブラリによるターミナル UI を描画しながら、1 秒ごとに 3 台のセンサー分のデータを送信します。
+
+**シミュレート対象（富士川滑空場）:**
+
+| AID | ラベル | 緯度 | 経度 |
+|---|---|---|---|
+| 1 | 南端 | 35.11972 | 138.63194 |
+| 2 | 中央 | 35.12062 | 138.63169 |
+| 3 | 北端 | 35.12152 | 138.63144 |
+
+**送信データ:** 平均 1.5 m/s、標準偏差 0.5 m/s のガウス分布で風速をランダム生成。風向は 180°（南風）を中心に ±10° のばらつきを加えています。
+
+### cli/server.py
+
+HMAC 署名付きの HTTP POST を担当するモジュールです。SecretKey は環境変数 `ANEMOMETER_SECRET_KEY` から取得します（未設定時のデフォルトは `secret`）。
+
+### cli/jsontest.py
+
+動作確認用のテストスクリプトです。`cli.py` と同じ HMAC 認証・データ形式でリクエストを送信します。環境変数 `ANEMOMETER_SECRET_KEY` でキーを指定できます。
+
+---
+
+## 14. 既知の制限・将来の改善候補
+
+| 項目 | 内容 |
+|---|---|
+| HTTPS 非対応 | 現状は HTTP のみ。本番では Nginx に SSL 証明書を設定することを推奨 |
+| レートリミットなし | `/data/create/` に大量リクエストを投げると DB が溢れる可能性がある |
+| テストコードなし | `data/tests.py` が空。今後は送受信・認証のテストを追加推奨 |
+| MySQL 権限が広い | `anemometer` ユーザーが DB 全体に `ALL PRIVILEGES` を持つ。本番では SELECT/INSERT に絞るべき |
+| Grafana ダッシュボードが手動管理 | 編集のたびに JSON エクスポートが必要 |
+
+---
+
+## 15. トラブルシューティング
+
+### ログの確認
+
 ```bash
-cd cli
-python3 jsontest.py
+docker compose logs django      # Python エラー・リクエストログ
+docker compose logs mysql       # DB 接続エラー
+docker compose logs nginx       # プロキシエラー・アクセスログ
+docker compose logs -f django   # リアルタイムで追う
 ```
-開発で新たな機能を追加した際は、必ずテストコードも併せて追記・実行する習慣をつけてください。
 
-## 12. CI/CDパイプラインとデプロイの流れ
-本プロジェクトではソースコードの変更を自動でサーバーへ反映（デプロイ）させる仕組みが構築されています。
+### Django コンテナ内で直接操作
 
-- **GitLab CI（`.gitlab-ci.yml`）**
-  特定のブランチ（例: `anemometer.tyama.mydns.jp`）に変更がプッシュされると、自動的にGitLab Runnerが起動します。
-  パイプラインはサーバー上で対象のリポジトリを更新し、`docker compose down` の後に `init.sh` を実行する挙動となっています。つまり、**本番環境のデプロイは専用ブランチにマージ・プッシュするだけ**で自動完了する仕組みです。本番特有の処理や運用を見直す際は、この `.gitlab-ci.yml` 並びに `cicd/` フォルダ内の構成を確認してください。
+```bash
+# コンテナ内シェルに入る
+docker compose exec django /bin/bash
 
-## 13. トラブルシューティングと過去の事例
-動作に異常が生じた際は、以下のコマンドで調査を行ってください。
-- `docker compose logs [コンテナ名]`: アプリケーションのログやスタックトレース（PythonのTraceback等）を確認します。
-- `docker compose exec django /bin/bash`: Djangoコンテナ内にログインし、設定ファイルなどを直接確認します。
-- `docker compose exec django ./manage.py shell`: Djangoの対話型シェルを起動し、ORMを利用してDB内のデータを直接確認します（例: `from data.models import Data; Data.objects.all()`）。
+# Django 対話型シェル（ORM でDB確認）
+docker compose exec django ./manage.py shell
+```
 
-### 13.1 過去のトラブル事例と対応
-- **MySQLのVolumesパーミッションエラー**
-  マウント方式にローカルディレクトリ（`./mysql`）を使用すると権限エラーが発生したため、安全な「名前付きボリューム (`mysql_data`)」を利用するよう修正済みです。
-- **初期化SQLと環境変数の不整合**
-  ユーザー作成時、スクリプト（`init.sql`）と環境変数間でユーザー名（`db-user`）の指定に差異があり、起動エラーが発生していました。現在は修正済みです。
-- **Grafanaへのアクセス拒否**
-  Grafanaはポート3000で動作していますが、環境変数の指定により、Nginx経由（ポート8000番）でのアクセスが必須となっています。直接 `localhost:3000` へアクセスするとリダイレクトエラーとなるため、**必ず `http://localhost:8000/grafana/` を使用してください**。
-- **シミュレータ動作時のデータ欠損（null問題）**
-  過去、Django側がGrafanaの期待するJSON形式に対応しておらず、データがネストされていたためにダッシュボード上で値が `null` となる問題がありました。現在は `views.py` の `updateLHWD` 内でトップレベルに展開するよう修正されています。APIのJSON構造を変更する際は、フロントエンドへの影響範囲に注意してください。
+```python
+# 例: 直近のデータを確認
+from data.models import Data
+Data.objects.order_by('-Time')[:5].values()
 
-## 14. おわりに
-本プロジェクトは、Dockerのインフラ構築にはじまり、DjangoによるREST API設計、HMAC認証によるセキュリティ制御、GrafanaとNginxを絡めたシステムの可視化といった複数の技術スタックが緊密に連携して構成されています。
-各コンポーネントが「どのようなデータを渡し、受け取っているのか」の連携フローを正確に把握することが、今後のシステム拡張や迅速なバグ解決に繋がります。本資料および過去のログ（`study_log.md`）を活用し、開発を進めてください。
+# 例: SecretKey の確認
+from data.models import SecretKey
+list(SecretKey.objects.all())
+```
+
+### よくあるエラー
+
+| エラー | 原因 | 対処 |
+|---|---|---|
+| `Connection Error` | サーバーが起動していない | `docker compose up -d` で起動 |
+| `Authentication Error (401)` | SecretKey が未登録 or 不一致 | DB への登録を確認、シミュレータのキーと一致させる |
+| `Grafana: Bad Gateway` | Django コンテナが起動していない | `docker compose ps` でコンテナ確認 |
+| `Table doesn't exist` | マイグレーション未実行 | `makemigrations` → `migrate` を実行 |
+| `ALLOWED_HOSTS` エラー | アクセス元ホストが許可リストにない | `settings.py` の `ALLOWED_HOSTS` に追加 |

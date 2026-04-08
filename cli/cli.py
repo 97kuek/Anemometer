@@ -3,6 +3,7 @@ import time
 import curses
 import json
 import random
+from collections import deque
 from requests.exceptions import RequestException, ConnectionError, HTTPError, Timeout
 
 from server import ServerComm
@@ -11,7 +12,7 @@ from Graphic import Graphic
 graphic = Graphic()
 servercomm = ServerComm()
 
-posts = [""] * 100
+posts = deque([""] * 100, maxlen=100)
 graphic.stdscr.keypad(True)
 
 # 富士川滑空場 滑走路中心座標
@@ -50,7 +51,7 @@ def post_mode():
             }
         }
         result = servercomm.post_data(body=data)
-        posts.insert(0, f"{sensor['label']} {result} AT:{datetime.datetime.now().strftime('%H:%M:%S')}")
+        posts.appendleft(f"{sensor['label']} {result} AT:{datetime.datetime.now().strftime('%H:%M:%S')}")
 
     height, width = graphic.stdscr.getmaxyx()
     for i in range(height - 7):

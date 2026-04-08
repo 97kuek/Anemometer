@@ -1,6 +1,6 @@
 services:
   nginx:
-    image: nginx:1.13
+    image: nginx:1.25
     ports:
       - "${HTTP_PORT:-8000}:80"
     volumes:
@@ -11,8 +11,7 @@ services:
       - django
 
   mysql:
-    image: mysql:5.7
-    platform: linux/x86_64
+    image: mysql:8.0
     command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     expose:
       - "3306"
@@ -37,7 +36,6 @@ services:
 
   grafana:
     image: grafana/grafana
-    platform: linux/x86_64
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning
     env_file:

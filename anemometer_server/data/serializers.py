@@ -3,5 +3,5 @@ from .models import Data
 
 class UseData(serializers.ModelSerializer):
     class Meta:
-        model=Data
-        fields='__all__'
+        model = Data
+        fields = ['id', 'Time', 'AID', 'data']
